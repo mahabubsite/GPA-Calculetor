@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/gpa.png">
+    <title>HSC GPA Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @keyframes fade-in { 0% { opacity: 0; transform: translateY(-10px); } 100% { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
+        @keyframes fade-in-up { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in-up { animation: fade-in-up 0.6s ease-out forwards; }
+        select {
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: .8em;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white p-4 sm:p-8">
+
+    <main class="max-w-4xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-500 mb-2">
+                HSC GPA Calculator
+            </h1>
+            <p class="text-slate-400">
+                Calculate your Higher Secondary Certificate GPA for the Bangladesh education system.
+            </p>
+        </header>
+
+        <section class="space-y-6">
+            <div class="p-4 bg-slate-800/50 rounded-xl shadow-lg">
+                <h2 class="text-xl font-bold mb-4 text-cyan-400">1. Select Your Group</h2>
+                <div id="group-selector" class="flex justify-center bg-slate-800 p-2 rounded-xl shadow-lg">
+                    <!-- Group buttons will be rendered here -->
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-800/50 rounded-xl shadow-lg">
+                <h2 class="text-xl font-bold mb-4 text-cyan-400">2. Enter Your Grades</h2>
+                <div id="subjects-container" class="space-y-3">
+                    <!-- Subject rows will be rendered here -->
+                </div>
+            </div>
+        </section>
+
+        <section class="flex flex-col sm:flex-row gap-4 mt-8">
+            <button id="add-subject-btn" class="w-full text-center bg-slate-700 hover:bg-slate-600 text-cyan-400 font-bold py-3 px-4 rounded-lg transition-colors">
+                + Add Another Subject
+            </button>
+            <button id="calculate-btn" class="w-full text-center bg-gradient-to-r from-cyan-500 to-emerald-600 hover:from-cyan-600 hover:to-emerald-700 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg shadow-cyan-500/20">
+                Calculate GPA
+            </button>
+            <button id="reset-btn" class="w-full text-center bg-red-500/80 hover:bg-red-600/80 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                Reset
+            </button>
+        </section>
+
+        <div id="result-container">
+            <!-- Result will be displayed here -->
+        </div>
+
+        <footer class="text-center mt-12 text-slate-500 text-sm">
+            <p>&copy; 2025 HSC GPA Calculator. Developed for educational purposes.</p>
+        </footer>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Data Models and Constants ---
+            const GRADE_POINTS = { 'A+': 5.0, 'A': 4.0, 'A-': 3.5, 'B': 3.0, 'C': 2.0, 'D': 1.0, 'F': 0.0 };
+            const GRADES = Object.keys(GRADE_POINTS);
+            const SUBJECTS_DATA = {
+                Science: {
+                    compulsory: ['Bangla', 'English', 'ICT'],
+                    group: ['Physics', 'Chemistry', 'Higher Math', 'Biology'],
+                    optional: ['Higher Math', 'Biology', 'Agriculture Studies', 'Statistics'],
+                },
+                'Business Studies': {
+                    compulsory: ['Bangla', 'English', 'ICT'],
+                    group: ['Accounting', 'Finance, Banking & Insurance', 'Business Organization & Management'],
+                    optional: ['Marketing', 'Statistics', 'Economics'],
+                },
+                Humanities: {
+                    compulsory: ['Bangla', 'English', 'ICT'],
+                    group: ['History', 'Civics & Good Governance', 'Economics', 'Sociology', 'Logic'],
+                    optional: ['Islamic History & Culture', 'Psychology', 'Statistics', 'Geography'],
+                },
+            };
+            const DEFAULT_SUBJECT_COUNT = 7;
+
+            // --- State Management ---
+            let state = {
+                selectedGroup: 'Science',
+                subjects: [],
+                result: null
+            };
+
+            // --- DOM Elements ---
+            const groupSelectorContainer = document.getElementById('group-selector');
+            const subjectsContainer = document.getElementById('subjects-container');
+            const resultContainer = document.getElementById('result-container');
+            const addSubjectBtn = document.getElementById('add-subject-btn');
+            const calculateBtn = document.getElementById('calculate-btn');
+            const resetBtn = document.getElementById('reset-btn');
+
+            // --- Helper Functions ---
+            const generateUniqueId = () => `subject_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+            const getSubjectLists = (group) => {
+                const data = SUBJECTS_DATA[group];
+                if (!data) return { compulsorySubjects: [], groupSubjects: [], allSelectableSubjects: [] };
+                const allSelectableSubjects = [...new Set([...data.group, ...data.optional])];
+                return {
+                    compulsorySubjects: data.compulsory,
+                    groupSubjects: data.group,
+                    allSelectableSubjects,
+                };
+            };
+            
+            // --- Rendering Functions ---
+            const renderGroupSelector = () => {
+                groupSelectorContainer.innerHTML = '';
+                Object.keys(SUBJECTS_DATA).forEach(group => {
+                    const button = document.createElement('button');
+                    button.textContent = group;
+                    button.className = `px-4 sm:px-6 py-3 text-sm font-bold transition-all duration-300 rounded-lg ${
+                        state.selectedGroup === group
+                            ? 'bg-cyan-500 text-white shadow-cyan-500/30 shadow-md'
+                            : 'bg-transparent text-slate-300 hover:bg-slate-700'
+                    }`;
+                    button.onclick = () => handleGroupChange(group);
+                    groupSelectorContainer.appendChild(button);
+                });
+            };
+
+            const renderSubjects = () => {
+                subjectsContainer.innerHTML = '';
+                const { compulsorySubjects, allSelectableSubjects } = getSubjectLists(state.selectedGroup);
+
+                state.subjects.forEach((subject, index) => {
+                    const isCompulsory = compulsorySubjects.includes(subject.name) && index < compulsorySubjects.length;
+                    
+                    const row = document.createElement('div');
+                    row.className = 'flex flex-col sm:flex-row items-center gap-2 bg-slate-800 p-3 rounded-lg animate-fade-in';
+                    
+                    // Subject Selector / Input
+                    const subjectSelectorHTML = isCompulsory 
+                        ? `<input type="text" value="${subject.name}" readonly class="w-full bg-slate-700/50 border-2 border-slate-600 text-slate-300 p-3 rounded-md focus:outline-none cursor-not-allowed" />`
+                        : `<select data-id="${subject.id}" class="subject-name-select w-full bg-slate-700 border-2 border-slate-600 text-white p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 appearance-none">
+                                ${allSelectableSubjects.map(subName => `<option value="${subName}" ${subject.name === subName ? 'selected' : ''}>${subName}</option>`).join('')}
+                           </select>`;
+
+                    // Grade Selector
+                    const gradeSelectorHTML = `<select data-id="${subject.id}" class="subject-grade-select w-full bg-slate-700 border-2 border-slate-600 text-white p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 appearance-none">
+                        <option value="" disabled ${!subject.grade ? 'selected' : ''}>Select Grade</option>
+                        ${GRADES.map(grade => `<option value="${grade}" ${subject.grade === grade ? 'selected' : ''}>${grade}</option>`).join('')}
+                    </select>`;
+                    
+                    // Optional Tag and Remove Button
+                    const optionalTagHTML = subject.isOptional ? `<span class="text-xs font-semibold bg-sky-500/20 text-sky-400 px-2 py-1 rounded-full">Optional</span>` : '';
+                    const removeButtonHTML = (!isCompulsory && state.subjects.length > DEFAULT_SUBJECT_COUNT)
+                        ? `<button data-id="${subject.id}" class="remove-subject-btn bg-red-500/20 hover:bg-red-500/40 text-red-400 p-3 rounded-md transition-colors" aria-label="Remove subject">
+                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                           </button>`
+                        : '';
+                        
+                    row.innerHTML = `
+                        <div class="w-full sm:w-2/5">${subjectSelectorHTML}</div>
+                        <div class="w-full sm:w-2/5">${gradeSelectorHTML}</div>
+                        <div class="w-full sm:w-1/5 flex items-center justify-end gap-2">${optionalTagHTML}${removeButtonHTML}</div>
+                    `;
+                    subjectsContainer.appendChild(row);
+                });
+                attachSubjectEventListeners();
+            };
+            
+            const renderResult = () => {
+                if (!state.result) {
+                    resultContainer.innerHTML = '';
+                    return;
+                }
+                const resultColorClass = { green: 'text-green-400 border-green-400', yellow: 'text-yellow-400 border-yellow-400', red: 'text-red-400 border-red-400' };
+                const resultBGColorClass = { green: 'bg-green-500/10', yellow: 'bg-yellow-500/10', red: 'bg-red-500/10' };
+
+                resultContainer.innerHTML = `
+                    <div class="mt-8 p-6 rounded-2xl animate-fade-in-up text-center ${resultBGColorClass[state.result.color]}">
+                        <p class="text-lg font-medium text-slate-300">Your HSC GPA</p>
+                        <div class="my-4 inline-block p-4 border-4 rounded-full ${resultColorClass[state.result.color]}">
+                            <p class="text-6xl font-bold">${state.result.gpa}</p>
+                        </div>
+                        <p class="text-2xl font-semibold ${resultColorClass[state.result.color]}">${state.result.status}</p>
+                    </div>`;
+            };
+
+            // --- Handlers & Logic ---
+            const handleGroupChange = (group) => {
+                state.selectedGroup = group;
+                initializeSubjects();
+                render();
+            };
+            
+            const initializeSubjects = () => {
+                const { compulsorySubjects, groupSubjects, allSelectableSubjects } = getSubjectLists(state.selectedGroup);
+                state.subjects = [
+                    ...compulsorySubjects.map(name => ({ id: generateUniqueId(), name, grade: '', isOptional: false })),
+                    ...groupSubjects.slice(0, 3).map(name => ({ id: generateUniqueId(), name, grade: '', isOptional: false })),
+                    { id: generateUniqueId(), name: groupSubjects[3] || allSelectableSubjects[0], grade: '', isOptional: true },
+                ];
+                state.result = null;
+            };
+            
+            const calculateGPA = () => {
+                const hasEmptyFields = state.subjects.some(s => !s.grade || !s.name);
+                if (hasEmptyFields) {
+                    alert("Please select a grade and subject for all fields.");
+                    return;
+                }
+                const subjectNames = state.subjects.map(s => s.name);
+                if (new Set(subjectNames).size !== subjectNames.length) {
+                    alert("Duplicate subjects found. Please select unique subjects.");
+                    return;
+                }
+
+                let totalPoints = 0, subjectCount = 0, hasFailed = false;
+                const mainSubjects = state.subjects.filter(s => !s.isOptional);
+                const optionalSubjects = state.subjects.filter(s => s.isOptional);
+
+                for (const subject of mainSubjects) {
+                    const points = GRADE_POINTS[subject.grade];
+                    if (points === 0) {
+                        hasFailed = true;
+                        break;
+                    }
+                    totalPoints += points;
+                    subjectCount++;
+                }
+
+                if (!hasFailed && optionalSubjects.length > 0) {
+                    const points = GRADE_POINTS[optionalSubjects[0].grade];
+                    if (points > 2) {
+                        totalPoints += (points - 2);
+                    }
+                }
+
+                if (hasFailed) {
+                    state.result = { gpa: '0.00', status: 'Failed', color: 'red' };
+                } else if (subjectCount === 0) {
+                    state.result = { gpa: '0.00', status: 'N/A', color: 'yellow' };
+                } else {
+                    const finalGPA = (totalPoints / subjectCount).toFixed(2);
+                    state.result = {
+                        gpa: finalGPA,
+                        status: 'Passed',
+                        color: parseFloat(finalGPA) >= 4.0 ? 'green' : 'yellow',
+                    };
+                }
+                renderResult();
+            };
+
+            const addSubject = () => {
+                if (state.subjects.length >= 12) return;
+                const { allSelectableSubjects } = getSubjectLists(state.selectedGroup);
+                const newSubjectName = allSelectableSubjects.find(s => !state.subjects.some(es => es.name === s)) || 'Other';
+                state.subjects.push({ id: generateUniqueId(), name: newSubjectName, grade: '', isOptional: true });
+                renderSubjects();
+            };
+
+            // --- Event Listener Management ---
+            const attachSubjectEventListeners = () => {
+                document.querySelectorAll('.subject-name-select, .subject-grade-select').forEach(select => {
+                    select.onchange = (e) => {
+                        const id = e.target.dataset.id;
+                        const subject = state.subjects.find(s => s.id === id);
+                        if (subject) {
+                            if (e.target.classList.contains('subject-name-select')) subject.name = e.target.value;
+                            if (e.target.classList.contains('subject-grade-select')) subject.grade = e.target.value;
+                        }
+                    };
+                });
+                document.querySelectorAll('.remove-subject-btn').forEach(button => {
+                    button.onclick = (e) => {
+                        const id = e.currentTarget.dataset.id;
+                        state.subjects = state.subjects.filter(sub => sub.id !== id);
+                        renderSubjects();
+                    };
+                });
+            };
+            
+            // --- Master Render & Initializer ---
+            const render = () => {
+                renderGroupSelector();
+                renderSubjects();
+                renderResult();
+            };
+            
+            // Initial App Load
+            initializeSubjects();
+            render();
+            
+            // Attach static event listeners
+            addSubjectBtn.onclick = addSubject;
+            calculateBtn.onclick = calculateGPA;
+            resetBtn.onclick = () => handleGroupChange(state.selectedGroup);
+        });
+    </script>
+</body>
+</html>
